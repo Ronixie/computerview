@@ -1,3 +1,5 @@
+// src/components/ParallelLogChart.vue
+
 <template>
   <div class="chart-container">
     <h2>登录日志及上下行流量数据平行坐标图</h2>
@@ -116,6 +118,13 @@ const updateSelectionInfo = (selectedIndices) => {
   // 仅预览前 5 条原始日志
   rawSelectedLogs.value = collectedRawLogs.slice(0, 5);
 };
+
+
+// ⭐️ 修正点 1: 将 resizeChart 函数定义提升到顶层作用域，确保 onUnmounted 能够正确引用。
+const resizeChart = () => {
+  myChart && myChart.resize();
+};
+
 
 const renderChart = () => {
   if (!chartRef.value || !chartData) return;
@@ -249,10 +258,11 @@ const renderChart = () => {
     updateSelectionInfo(selectedIndices);
   });
 
-  const resizeChart = () => {
-    myChart && myChart.resize();
-  };
-  window.addEventListener('resize', resizeChart);
+  // ⭐️ 修正点 2: 移除 renderChart 中重复添加监听器的代码。
+  // const resizeChart = () => {
+  //   myChart && myChart.resize();
+  // };
+  // window.addEventListener('resize', resizeChart);
 };
 
 
@@ -263,6 +273,9 @@ onMounted(async () => {
     await nextTick();
     renderChart();
     updateSelectionInfo([]);
+
+    // ⭐️ 修正点 3: 在 onMounted (组件挂载时) 只添加一次监听器。
+    window.addEventListener('resize', resizeChart);
   } catch (error) {
     console.error("处理平行坐标图数据失败:", error);
     isLoading.value = false;
@@ -270,6 +283,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  // ⭐️ 修正点 4: 在 onUnmounted (组件卸载时) 移除监听器。
   window.removeEventListener('resize', resizeChart);
   if (myChart) {
     myChart.dispose();
