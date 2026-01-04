@@ -34,3 +34,6 @@ coverage
 
 # Vitest
 __screenshots__/
+
+tcplog_clean.json
+weblog_clean.json
