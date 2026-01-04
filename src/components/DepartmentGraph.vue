@@ -4,13 +4,14 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import * as echarts from 'echarts';
+// ✅ 按需引入
+import * as echarts from 'echarts/core';
+import { GraphChart } from 'echarts/charts'; // 只引入关系图
+import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 
-// 导入所有必需数据源
-import internalInteractionsData from '@/assets/internal_employee_interactions.json';
-import allInteractionsData from '@/assets/email_undirected_interactions.json';
-// 核心新增：导入用于计算信息熵（部门内部唯一发件人数）的新数据源
-import inDegreeData from '@/assets/employee_same_dept_in_degree.json';
+// 注册必须的组件
+echarts.use([GraphChart, TitleComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 import { processDataForGraph } from '@/utils/dataProcessor';
 
@@ -31,7 +32,7 @@ const props = defineProps({
 const chartRef = ref(null);
 let myChart = null;
 
-const initChart = (dept) => {
+const initChart = async (dept) => {
   if (!chartRef.value) return;
 
   if (myChart) {
@@ -39,8 +40,19 @@ const initChart = (dept) => {
   }
   myChart = echarts.init(chartRef.value);
 
-  // 传递所有数据源，包括新的 inDegreeData
-  const graphData = processDataForGraph(internalInteractionsData, allInteractionsData, inDegreeData, dept);
+  // 1. 显示 Loading (防止白屏)
+  myChart.showLoading();
+
+  try {
+    // 2. 并行请求数据 (注意：文件必须在 public/data 目录下)
+    const [internalRes, allRes, inDegreeRes] = await Promise.all([
+      fetch('/data/internal_employee_interactions.json').then(res => res.json()),
+      fetch('/data/email_undirected_interactions.json').then(res => res.json()),
+      fetch('/data/employee_same_dept_in_degree.json').then(res => res.json())
+    ]);
+
+  // 传递所有数据源，传入fetch回来的数据
+  const graphData = processDataForGraph(internalRes, allRes, inDegreeRes, dept);
   const departmentName = departmentNames[dept];
 
   // ⭐️ 核心优化 1: 动态调整斥力值
@@ -134,7 +146,13 @@ const initChart = (dept) => {
     ]
   };
 
+  myChart.hideLoading(); // 隐藏 Loading
   myChart.setOption(option);
+
+}catch(error){
+  console.error('数据加载失败：',error);
+  myChart.hideLoading();
+};
 
   window.addEventListener('resize', () => {
     myChart && myChart.resize();
