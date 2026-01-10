@@ -1,7 +1,5 @@
 /* src/assets/main.css */
-body {
-  background-color: red !important; /* 🟥 强制变红 */
-}
+
 /* 1. 引入现代字体 (可选，让数字和英文更漂亮) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
